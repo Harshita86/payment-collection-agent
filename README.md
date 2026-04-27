@@ -31,7 +31,7 @@ python3 evaluate.py
 ```
 agent.py          # Agent class — required interface: Agent.next()
 state.py          # ConversationState + Stage FSM
-tools.py          # Tool definitions + ToolHandler (API calls, verification logic)
+tools.py          # ToolHandler (API calls, verification logic)
 validators.py     # Luhn check, CVV, expiry, amount validation
 cli.py            # Interactive CLI runner
 evaluate.py       # Automated evaluation suite (11 scenarios, LLM judge)
@@ -106,7 +106,7 @@ Each scenario uses:
 
 Results written to `eval_results.json`.
 
-**Latest run: 10/11 passed (91%)**
+**Latest run: 11/11 passed (100%)**
 
 ---
 
