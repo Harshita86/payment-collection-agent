@@ -81,6 +81,24 @@ All account data (full_name, DOB, Aadhaar, pincode, **balance**) is stored **onl
 
 ---
 
+## Assumptions & Ambiguities
+
+The spec was intentionally underspecified in several places. Here is how each ambiguity was interpreted and why:
+
+| Ambiguity | Assumption Made | Reasoning |
+|-----------|----------------|-----------|
+| **Retry limit not specified** — spec says "allow reasonable retries" | Hard lock after **3 failed verification attempts** | 3 is a standard security threshold — enough for honest mistakes (typo in name), tight enough to stop brute-force guessing |
+| **What happens after lockout** — spec does not say | Session is permanently closed; user directed to customer support | Continuing the session after lockout would defeat the purpose of the limit |
+| **Card retry limit not specified** | **Unlimited** card retries within a session | Card errors (typos, wrong expiry) are UX friction, not a security signal. Locking after a few card mistakes would frustrate legitimate users |
+| **Zero balance flow** — should verification still happen before revealing ₹0? | **Yes — verify first, then reveal balance** | Revealing balance=0 before verification still confirms the account exists and has no debt — this is information leakage |
+| **Out-of-order information** — user volunteers name before being asked | Name is accepted in context but **verification is still fully re-collected** | Skipping verification because a name appeared earlier in chat would be a security hole. The spec hard-rules "do not skip steps even if the user volunteers information early" |
+| **Missing secondary factor** — should providing only a name (no secondary) count as a failed attempt? | **No** — it does not consume an attempt | Penalising a user for an incomplete input before they've had a real attempt is unfair UX. Only a full name+secondary factor submission that fails counts |
+| **Leap year DOB (1988-02-29)** — is this a valid date? | **Yes** — accepted as-is | It is a factually valid date. Python's date parsing handles it correctly. The nearby wrong date 1988-02-28 must correctly fail |
+| **API base URL** — spec lists `/openapi/` in base URL | `/openapi/` path returns 404; correct endpoint is `/api/lookup-account` directly | Discovered through integration testing. Documented here as the spec appears to have an error in the base URL |
+| **cardholder_name validation** — spec says it is "accepted as-is and not validated against account holder's name" | cardholder_name is passed through to the API without cross-checking | Explicitly documented in the API spec; followed as-is |
+
+---
+
 ## Tradeoffs Accepted
 
 | Tradeoff | Decision | Consequence |
