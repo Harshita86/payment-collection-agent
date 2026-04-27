@@ -1,0 +1,841 @@
+[
+  {
+    "scenario": "happy_path_dob",
+    "description": "Successful payment verified via date of birth",
+    "expected_outcome": "payment_success",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! How can I assist you today? Could you please provide me with your account ID?",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "account",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 2,
+        "user": "ACC1001",
+        "agent": "Thank you! I found your account. Could you please provide your full name and one secondary factor? This can be your date of birth in YYYY-MM-DD format, the last 4 digits of your Aadhaar, or your pincode.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "name",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 3,
+        "user": "Nithin Jain",
+        "agent": "Thank you, Nithin Jain. Now, please provide one secondary factor: your date of birth (YYYY-MM-DD), the last 4 digits of your Aadhaar, or your pincode.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "date",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "aadhaar",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "pincode",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "secondary",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "verify factor",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 4,
+        "user": "My date of birth is 1990-05-14",
+        "agent": "Your identity has been successfully verified. Your outstanding balance is \u20b91250.75. How much would you like to pay today?",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "verified",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "balance",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "1990-05-14",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 5,
+        "user": "I want to pay the full amount of 1250.75",
+        "agent": "Great! I will need the following card details to process your payment for \u20b91250.75:\n\n1. Card number\n2. CVV\n3. Expiry month\n4. Expiry year\n5. Cardholder name\n\nCould you please provide these details?",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "card",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 6,
+        "user": "Card: 4532015112830366, CVV: 123, Expiry: 12/2027, Name: Nithin Jain",
+        "agent": "Your payment of \u20b91250.75 has been processed successfully! Your transaction ID is **txn_1777314401753_5u6e5gu**.\n\nThank you for your payment. If you need any further assistance, feel free to ask. Have a great day!",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "transaction",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent successfully verified the user's identity using the provided date of birth and processed the payment as expected.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "happy_path_aadhaar",
+    "description": "Successful payment verified via Aadhaar last 4",
+    "expected_outcome": "payment_success",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hello",
+        "agent": "Hello! How can I assist you today? Could you please provide me with your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC1001",
+        "agent": "Great! I found your account. Could you please provide me with your full name? Additionally, I'll need at least one secondary factor, such as your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "Nithin Jain",
+        "agent": "Thank you, Nithin Jain. Now, please provide me with one of the following secondary factors: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 4,
+        "user": "Aadhaar last 4 is 4321",
+        "agent": "Your identity has been verified successfully. You have an outstanding balance of \u20b91250.75. How much would you like to pay towards this balance? Please let me know the amount.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "verified",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 5,
+        "user": "Pay 500",
+        "agent": "I will now need to collect your card details to process the payment of \u20b9500. Please provide the following information:\n\n1. Card number\n2. CVV\n3. Expiry month\n4. Expiry year\n5. Cardholder name",
+        "checks": []
+      },
+      {
+        "turn": 6,
+        "user": "4532015112830366, CVV 123, expires 12 2027, cardholder Nithin Jain",
+        "agent": "The payment of \u20b9500 has been processed successfully! Your transaction ID is txn_1777314422785_agf1fjb. \n\nIf you have any more questions or need further assistance, feel free to ask. Thank you for your payment, and have a great day!",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "transaction",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent successfully verified the payment using the last 4 digits of the Aadhaar number and processed the payment as expected. The conversation followed all required steps while maintaining professional communication.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "partial_payment",
+    "description": "User makes a partial payment less than the balance",
+    "expected_outcome": "payment_success",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! I'm here to assist you with your payment. Could you please provide your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "My account ID is ACC1001",
+        "agent": "Thank you for that information! Could you please provide your full name, along with at least one of the following secondary factors: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "Nithin Jain",
+        "agent": "Thank you, Nithin Jain. Now, could you please provide one of the following secondary factors: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 4,
+        "user": "DOB 1990-05-14",
+        "agent": "Your identity has been successfully verified. Your outstanding balance is \u20b91250.75. How much would you like to pay today? You can make a partial payment if you prefer.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "verified",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 5,
+        "user": "I want to pay only 500",
+        "agent": "Great! Please provide the following card details to proceed with the payment of \u20b9500:\n\n1. Card number\n2. CVV\n3. Expiry month\n4. Expiry year\n5. Cardholder name",
+        "checks": []
+      },
+      {
+        "turn": 6,
+        "user": "4532015112830366, 123, 12, 2027, Nithin Jain",
+        "agent": "Your payment of \u20b9500 has been processed successfully! Your transaction ID is **txn_1777314440493_t2i49v2**. \n\nThank you for your payment! If you need any further assistance, feel free to ask. Have a great day!",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "transaction",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent successfully processed a partial payment of \u20b9500, which aligns with the expected outcome of 'payment_success.'",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "verification_lockout",
+    "description": "User fails verification 3 times (name+DOB wrong each time) \u2014 session locks",
+    "expected_outcome": "verification_locked",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hello",
+        "agent": "Hello! How can I assist you today? Could you please provide your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC1001",
+        "agent": "Great! I found your account. Please provide your full name and one secondary factor: either your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "My full name is John Smith and my date of birth is 1990-01-01",
+        "agent": "Verification was not successful. You have 2 attempts remaining. Please try again with your full name and a secondary factor.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "remaining",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "attempt",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "not successful",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "verification",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 4,
+        "user": "My full name is Jane Doe and my date of birth is 1990-01-01",
+        "agent": "Verification was not successful. You have 1 attempt remaining. Please try again with your full name and a secondary factor.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "remaining",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "attempt",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "not successful",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "verification",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 5,
+        "user": "My full name is Bob Jones and my date of birth is 1990-01-01",
+        "agent": "Maximum verification attempts have been exceeded, and the session is now locked. I'm sorry, but I'm unable to assist further at this time. Please try again later or contact customer support for help. Thank you and take care!",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "locked",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "exhausted exceeded maximum",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "support",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "contact reach out",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "session",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "security",
+            "passed": false
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "card",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "balance",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 0.938,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent correctly executed the verification process and locked the session after three unsuccessful attempts, aligning with the expected outcome of 'verification_locked'.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "invalid_account",
+    "description": "Account ID does not exist",
+    "expected_outcome": "account_not_found",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! How can I assist you today? Could you please provide me with your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC9999",
+        "agent": "It seems that there is no account found with the ID you've provided. Please double-check your account ID and try again.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "no account",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "account",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "check",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "double-check",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "try again",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "associated",
+            "passed": false
+          }
+        ]
+      }
+    ],
+    "keyword_score": 0.833,
+    "llm_judge": {
+      "pass": true,
+      "score": 8,
+      "reasoning": "The agent correctly identified that the account ID does not exist and communicated this to the user clearly and professionally.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "zero_balance",
+    "description": "Account with zero balance \u2014 verified then told no payment needed",
+    "expected_outcome": "zero_balance",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! How can I assist you today? Could you please provide me with your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC1003",
+        "agent": "Thank you for your patience. Could you please provide me with your full name? Additionally, I will need one secondary factor, which can be your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "Priya Agarwal",
+        "agent": "Thank you, Priya Agarwal. Could you please provide one of the following secondary factors: your date of birth (YYYY-MM-DD), the last 4 digits of your Aadhaar number, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 4,
+        "user": "My date of birth is 1992-08-10",
+        "agent": "Your identity has been successfully verified. However, I would like to inform you that there is no outstanding amount due on your account. \n\nIf you have any other questions or need assistance with anything else, feel free to ask!",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "verified",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "balance outstanding payment",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "no 0 zero",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "1992-08-10",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent successfully verified the user's identity and correctly communicated that there was no outstanding amount due on the account, aligning with the expected outcome of identifying a zero balance.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "leap_year_dob",
+    "description": "ACC1004 with exact leap year DOB 1988-02-29 \u2014 must verify",
+    "expected_outcome": "verification_pass",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! How can I assist you today? Could you please provide your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC1004",
+        "agent": "Thank you for your account ID. Could you please provide your full name along with one of the following secondary factors: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "Rahul Mehta",
+        "agent": "Thank you, Rahul Mehta. Now, could you please provide one of the following secondary factors: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 4,
+        "user": "My DOB is 1988-02-29",
+        "agent": "Your identity has been successfully verified. Your outstanding balance is \u20b93200.50. How much would you like to pay today?",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "verified",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent successfully verified the user's identity with the provided leap year DOB, matching the expected outcome of verification_pass.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "wrong_leap_year_dob",
+    "description": "ACC1004 with wrong DOB 1988-02-28. Agent should fail the attempt and show attempts remaining. Session should NOT be locked yet (only 1 of 3 attempts used). Balance must NOT be shown.",
+    "expected_outcome": "One verification attempt fails. Agent tells user attempts remaining. Does not show balance or proceed to payment.",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! How can I assist you today? Could you please provide your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC1004",
+        "agent": "Great! I found your account. Could you please provide your full name? Additionally, I will need one secondary factor: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "Rahul Mehta",
+        "agent": "Thank you, Rahul Mehta. Now, could you please provide one secondary factor: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 4,
+        "user": "My DOB is 1988-02-28",
+        "agent": "I'm sorry, but the verification was not successful. You have 2 attempts remaining. Please try again with your full name and a secondary factor.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "not successful",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "remaining",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "attempt",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "verification",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "verified successfully",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "balance",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent correctly identified the wrong DOB, indicated that the verification was not successful, and communicated the remaining attempts. No sensitive information was revealed and the session was not locked, meeting all criteria of the expected outcome.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "invalid_card",
+    "description": "User provides a card number that fails Luhn check",
+    "expected_outcome": "payment_failed_invalid_card",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! How can I assist you today? Could you please provide me with your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC1001",
+        "agent": "Great! I found your account. Could you please provide your full name? Additionally, I need one secondary factor: either your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "Nithin Jain",
+        "agent": "Thank you, Nithin Jain. Now, could you please provide me with one secondary factor: either your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 4,
+        "user": "DOB 1990-05-14",
+        "agent": "Thank you for your patience, Nithin. Your identity has been successfully verified. You have an outstanding balance of \u20b91250.75. \n\nHow much would you like to pay today? You can make a partial payment if you prefer.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "verified",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 5,
+        "user": "Pay 500",
+        "agent": "Great! I'll need to collect your card details to process the payment of \u20b9500. Please provide the following information:\n\n1. Card number\n2. CVV\n3. Expiry month\n4. Expiry year\n5. Cardholder name",
+        "checks": []
+      },
+      {
+        "turn": 6,
+        "user": "card number 1234567890123456 cvv 123 expiry month 12 expiry year 2027 cardholder Nithin Jain",
+        "agent": "It appears that the card number you provided is invalid. Please double-check the card number and provide it again.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "invalid",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "card",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "valid",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "number",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "transaction",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "success",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent correctly identified that the card number provided failed the Luhn check and communicated this to the user in a clear and professional manner.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "expired_card",
+    "description": "User provides an expired card",
+    "expected_outcome": "payment_failed_expired",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi",
+        "agent": "Hello! Thank you for reaching out. Could you please provide your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "ACC1001",
+        "agent": "I've found your account. Could you please provide your full name? Additionally, I'll need one secondary factor: your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "Nithin Jain",
+        "agent": "Thank you, Nithin Jain. Please provide one secondary factor: either your date of birth (in YYYY-MM-DD format), the last 4 digits of your Aadhaar number, or your pincode.",
+        "checks": []
+      },
+      {
+        "turn": 4,
+        "user": "DOB 1990-05-14",
+        "agent": "Your identity has been successfully verified. You have an outstanding balance of \u20b91250.75. How much would you like to pay today?",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "verified",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "turn": 5,
+        "user": "Pay 500",
+        "agent": "Thank you for your payment request. Could you please provide the following card details to proceed with the payment of \u20b9500?\n\n1. Card number\n2. CVV\n3. Expiry month\n4. Expiry year\n5. Cardholder name",
+        "checks": []
+      },
+      {
+        "turn": 6,
+        "user": "Card 4532015112830366, CVV 123, expiry 01/2020, Nithin Jain",
+        "agent": "It seems the card you've provided has an invalid or expired expiry date. Could you please double-check the expiry month and year and provide the correct details?",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "expir",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "transaction",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "success",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent correctly identified that the card provided by the user was expired and communicated this clearly, which aligns with the expected outcome of 'payment_failed_expired'.",
+      "issues": []
+    },
+    "overall_pass": true
+  },
+  {
+    "scenario": "out_of_order_info",
+    "description": "User volunteers name early \u2014 agent must still ask for secondary factor",
+    "expected_outcome": "secondary_factor_still_required",
+    "turn_results": [
+      {
+        "turn": 1,
+        "user": "Hi, I'm Nithin Jain and I want to pay my bill",
+        "agent": "Hello Nithin! I'd be happy to assist you with your bill payment. Could you please provide me with your account ID?",
+        "checks": []
+      },
+      {
+        "turn": 2,
+        "user": "My account ID is ACC1001",
+        "agent": "Thank you for your patience. To proceed, could you please confirm your full name and provide at least one of the following secondary factors: your date of birth (in YYYY-MM-DD format), the last four digits of your Aadhaar number, or your pincode?",
+        "checks": []
+      },
+      {
+        "turn": 3,
+        "user": "What next",
+        "agent": "I still need your full name and at least one secondary factor (your date of birth in YYYY-MM-DD format, the last four digits of your Aadhaar number, or your pincode) to verify your identity. Please provide that information so we can continue.",
+        "checks": [
+          {
+            "type": "must_contain",
+            "keyword": "date",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "aadhaar",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "pincode",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "secondary",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "date of birth",
+            "passed": true
+          },
+          {
+            "type": "must_contain",
+            "keyword": "verify",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "balance",
+            "passed": true
+          },
+          {
+            "type": "must_not_contain",
+            "keyword": "1250",
+            "passed": true
+          }
+        ]
+      }
+    ],
+    "keyword_score": 1.0,
+    "llm_judge": {
+      "pass": true,
+      "score": 10,
+      "reasoning": "The agent correctly asked for a secondary factor despite the user providing their name early in the conversation, satisfying the expected outcome.",
+      "issues": []
+    },
+    "overall_pass": true
+  }
+]
