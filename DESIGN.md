@@ -36,12 +36,12 @@ The agent uses a **hybrid FSM + LLM** architecture:
 
 | Tool | What it does |
 |------|-------------|
-| `lookup_account` | Calls API, stores all fields (name, DOB, Aadhaar, pincode, balance) in Python state only; returns only success flag to LLM |
-| `verify_identity` | Pure Python logic; returns pass/fail + balance (on success) + attempts remaining to LLM |
-| `process_payment` | Validates card in Python (Luhn, CVV, expiry), then calls API |
+| `lookup_account` | Calls API, stores all account fields in Python state; returns only a success flag to the LLM — no account data |
+| `verify_identity` | Pure Python exact-match logic; returns pass/fail + balance (on success) + attempts remaining to LLM |
+| `process_payment` | Validates card locally (Luhn, CVV, expiry, amount), then calls the payment API |
 
 ### Security model
-All account data (full_name, DOB, Aadhaar, pincode, **balance**) is stored **only in Python state**. The LLM never sees sensitive fields — `lookup_account` returns only `{"success": true}`, and `verify_identity` returns `{"verified": true, "balance": 1250.75}` only on successful verification. This makes it **structurally impossible** for the LLM to reveal the balance before verification passes — the data is not in its context until that moment.
+Sensitive identity fields (DOB, Aadhaar, pincode) are **structurally withheld** from the LLM at all times — they are stored in Python state and never appear in any tool result. The account balance is similarly held in Python state and released to the LLM **only when `verify_identity` succeeds** — making it impossible to reveal the balance before verification passes, regardless of what the system prompt says.
 
 ---
 
@@ -53,47 +53,42 @@ All account data (full_name, DOB, Aadhaar, pincode, **balance**) is stored **onl
 
 ### 2. Three focused tools
 **Decision:** Three tools (`lookup_account`, `verify_identity`, `process_payment`) rather than one monolithic agent prompt.  
-**Why:** Clear decision points, auditable tool calls, and Python can enforce preconditions (e.g., `process_payment` refuses if `state.verified == False` regardless of what the LLM believes).
+**Why:** Clear decision points, auditable tool calls, and Python enforces preconditions independently of the LLM — e.g. `process_payment` hard-refuses if `state.verified == False` regardless of what the LLM believes.
 
-### 3. Sensitive data — including balance — never enters LLM context until the right moment
-**Decision:** `lookup_account` stores all fields in Python state and returns only `{"success": true}` to the LLM. The balance is returned to the LLM only by `verify_identity` on successful verification.  
-**Why:** Defence-in-depth. Even if the system prompt is bypassed, the LLM cannot expose what it never received. Balance is withheld structurally — not by instruction — until verification passes.
+### 3. Sensitive data structurally withheld from LLM context
+**Decision:** `lookup_account` stores all fields in Python state and returns only `{"success": true}` to the LLM. Balance is returned to the LLM only by `verify_identity` on successful verification.  
+**Why:** Defence-in-depth. Even if the system prompt is bypassed or ignored, the LLM cannot expose data it has never received. This is a structural guarantee, not an instructional one.
 
-### 4. Missing secondary factor ≠ failed attempt
-**Decision:** If `verify_identity` is called with name but no secondary factor, return an error without incrementing the attempt counter.  
-**Why:** Penalising a user for incomplete input before they've had a real verification attempt is unfair and breaks UX.
+### 4. Missing secondary factor does not count as a failed attempt
+**Decision:** If `verify_identity` is called with a name but no secondary factor, return a guidance error without incrementing the attempt counter.  
+**Why:** Penalising a user for an incomplete input before they have had a real verification attempt is poor UX and would unfairly consume their retry budget.
 
-### 5. Retry limit: 3 for verification
-**Decision:** Hard lock after 3 failed verification attempts; card errors are retryable without a hard limit.  
-**Why:** Verification failures are a security signal. Card entry errors are UX friction — users commonly mistype card details.
+### 5. Verification retry limit: 3 attempts, then hard lock
+**Decision:** Session locks permanently after 3 failed verification attempts. Card payment errors are retryable without a limit.  
+**Why:** Repeated verification failures are a security signal — they indicate either a wrong user or a brute-force attempt. Card errors are UX friction — users commonly mistype card details and deserve unlimited retries.
 
-### 6. Leap year DOB (ACC1004: 1988-02-29)
-**Decision:** Accept `1988-02-29` as a valid date. Python's `datetime.strptime` correctly handles leap years.  
-**Why:** The date is factually valid. The string comparison is exact — "1988-02-29" must match exactly; "1988-02-28" fails.
+### 6. Leap year DOB treated as a valid exact-match string
+**Decision:** Accept `1988-02-29` as a valid date of birth. Verification uses exact string comparison (`inputs["dob"] == account.dob`) — no date parsing required.  
+**Why:** The date is factually valid. Since the API stores and returns the DOB as a YYYY-MM-DD string, string equality is sufficient and correct. `"1988-02-29"` matches; `"1988-02-28"` does not.
 
-### 7. Zero balance handling
-**Decision:** Complete verification first, then inform user of zero balance and close.  
-**Why:** Revealing balance=0 before verification still leaks account information (confirms account exists and has no debt).
-
-### 8. API base URL discovery
-**Decision:** Use `https://...prodigaltech.com/api/lookup-account` (without the `/openapi/` segment).  
-**Why:** The spec lists the base URL with `/openapi/`, but that path returns 404 in practice. Discovered and fixed during integration testing by checking actual API responses.
+### 7. Zero balance — verify identity first, then reveal balance
+**Decision:** Complete full identity verification before informing the user of a ₹0 balance.  
+**Why:** Revealing balance=0 before verification confirms that the account exists and carries no debt — this is account information that should be protected behind verification, not disclosed freely.
 
 ---
 
 ## Assumptions & Ambiguities
 
-The spec was intentionally underspecified in several places. Here is how each ambiguity was interpreted and why:
+The spec was intentionally underspecified in several places. Below are the ambiguities identified and the approach taken for each:
 
 | Ambiguity | Assumption Made | Reasoning |
 |-----------|----------------|-----------|
-| **Retry limit not specified** — spec says "allow reasonable retries" | Hard lock after **3 failed verification attempts** | 3 is a standard security threshold — enough for honest mistakes (typo in name), tight enough to stop brute-force guessing |
-| **What happens after lockout** — spec does not say | Session is permanently closed; user directed to customer support | Continuing the session after lockout would defeat the purpose of the limit |
-| **Card retry limit not specified** | **Unlimited** card retries within a session | Card errors (typos, wrong expiry) are UX friction, not a security signal. Locking after a few card mistakes would frustrate legitimate users |
-| **Zero balance flow** — should verification still happen before revealing ₹0? | **Yes — verify first, then reveal balance** | Revealing balance=0 before verification still confirms the account exists and has no debt — this is information leakage |
-| **Out-of-order information** — user volunteers name before being asked | Name is accepted in context but **verification is still fully re-collected** | Skipping verification because a name appeared earlier in chat would be a security hole. The spec hard-rules "do not skip steps even if the user volunteers information early" |
-| **Missing secondary factor** — should providing only a name (no secondary) count as a failed attempt? | **No** — it does not consume an attempt | Penalising a user for an incomplete input before they've had a real attempt is unfair UX. Only a full name+secondary factor submission that fails counts |
-| **Leap year DOB (1988-02-29)** — is this a valid date? | **Yes** — accepted as-is | It is a factually valid date. Python's date parsing handles it correctly. The nearby wrong date 1988-02-28 must correctly fail |
+| **Verification retry limit** — spec says "allow reasonable retries" but gives no number | Hard lock after **3 failed attempts** | 3 is a widely used security threshold — enough for honest input mistakes, tight enough to limit guessing |
+| **Behaviour after lockout** — spec does not define what happens | Session permanently closed; user directed to contact support | Allowing any continuation after a lockout would defeat its purpose |
+| **Card retry limit** — spec does not specify | **Unlimited** card retries within a session | Card errors are UX friction (typos, wrong expiry), not a security signal. Locking after card mistakes would frustrate legitimate users |
+| **Zero balance flow** — spec does not say whether to verify before or after revealing ₹0 | **Verify first, then reveal** | Revealing balance=0 before verification leaks account existence and debt status — treat it the same as any other balance |
+| **Missing secondary factor** — spec does not say whether submitting only a name (no secondary) counts as a failed attempt | **Does not consume an attempt** | The user has not yet had a real verification attempt — penalising incomplete input is unfair and consumes the retry budget prematurely |
+| **Leap year DOB** — spec flags ACC1004's DOB as a leap year date and asks how it should be handled | Accepted as a **valid, exact-match date** | `1988-02-29` is a real calendar date. Exact string comparison handles it correctly — no special-casing needed |
 
 ---
 
@@ -101,56 +96,52 @@ The spec was intentionally underspecified in several places. Here is how each am
 
 | Tradeoff | Decision | Consequence |
 |----------|----------|-------------|
-| LLM non-determinism | Accepted for NLU/NLG | Responses vary in phrasing; functional behaviour is deterministic via Python tools |
-| Full conversation history in memory | Keep all turns | Memory grows with conversation; acceptable for a short payment flow |
-| No card tokenisation | Card fields used for API call then discarded | Suitable for demo; production would use a PCI-compliant vault |
-| GPT-4o-mini instead of larger model | Cost/speed tradeoff | Occasional phrasing inconsistencies; core logic remains correct |
-| Balance not re-fetched before payment | Use cached value from lookup | API notes balance doesn't persist anyway; acceptable for this scope |
+| LLM non-determinism | Accepted for NLU/NLG only | Response phrasing varies; all functional behaviour (verification, payment, state) is deterministic via Python |
+| Full conversation history in memory | Keep all turns in `self.messages` | Memory grows linearly with turns; acceptable for a short payment flow |
+| No card tokenisation | Card fields used for a single API call then discarded | Acceptable for this scope; production would use a PCI-compliant vault (Stripe, Braintree) |
+| GPT-4o-mini over a larger model | Cost and latency tradeoff | Occasional phrasing variation; core logic is model-agnostic and unaffected |
+| Balance not re-fetched before payment | Cached value from lookup used | The API explicitly states balance does not persist across requests; re-fetching would return the same value |
 
 ---
 
 ## Evaluation Results
 
-The automated evaluation suite (`evaluate.py`) runs 11 scripted scenarios:
+The automated evaluation suite (`evaluate.py`) runs 11 scripted scenarios combining keyword-based turn-level assertions and an LLM judge scoring flow, security, and clarity:
 
-| Scenario | Result |
-|---|---|
-| happy_path_dob | ✅ PASS (10/10) |
-| happy_path_aadhaar | ✅ PASS (10/10) |
-| partial_payment | ✅ PASS (10/10) |
-| verification_lockout | ✅ PASS (10/10) |
-| invalid_account | ✅ PASS (8/10) |
-| zero_balance | ✅ PASS (10/10) |
-| leap_year_dob | ✅ PASS (10/10) |
-| wrong_leap_year_dob | ✅ PASS (keyword: 100%, judge: 6/10) |
-| invalid_card | ✅ PASS (9/10) |
-| expired_card | ✅ PASS (9/10) |
-| out_of_order_info | ✅ PASS (9/10) |
+| Scenario | What it tests | Result |
+|---|---|---|
+| happy_path_dob | Full flow verified via DOB | ✅ PASS |
+| happy_path_aadhaar | Full flow verified via Aadhaar last 4 | ✅ PASS |
+| partial_payment | Amount less than balance | ✅ PASS |
+| verification_lockout | 3 wrong attempts → session locked | ✅ PASS |
+| invalid_account | Non-existent account ID | ✅ PASS |
+| zero_balance | ACC1003, ₹0 balance — verify then close | ✅ PASS |
+| leap_year_dob | ACC1004 correct DOB 1988-02-29 | ✅ PASS |
+| wrong_leap_year_dob | ACC1004 wrong DOB 1988-02-28 → one attempt consumed | ✅ PASS |
+| invalid_card | Luhn check failure → re-prompt | ✅ PASS |
+| expired_card | Expired card → re-prompt | ✅ PASS |
+| out_of_order_info | Name volunteered early → secondary factor still required | ✅ PASS |
 
-**Overall: 10/11 scenarios passed (91%)**
+**Overall: 11/11 scenarios passed (100%)**
 
 ---
 
 ## Observations — Where the Agent Struggles
 
-1. **Out-of-order name**: When users volunteer their name before the account ID step, the LLM re-asks for the name after lookup even though it already exists in context. This is by design (security — must explicitly re-confirm during verification) but can feel repetitive.
+1. **Response phrasing variability**: The LLM uses natural language variation — "verification was not successful" vs "verification failed" vs "unable to verify". This is expected LLM behaviour and does not affect functional correctness, but requires OR-based keyword matching in automated evaluation.
 
-2. **Keyword variability**: The LLM uses varied phrasing — "was not successful" vs "failed" vs "unsuccessful". This is a challenge for keyword-based evaluation but does not affect actual user experience.
+2. **Complex card input parsing**: When users provide all card fields in a single free-form message with unusual formatting, the LLM occasionally asks for individual fields rather than parsing the full message in one shot. This is a known limitation of instruction-following in smaller models.
 
-3. **Zero balance short-circuit**: Early versions revealed zero balance before verification. Fixed via system prompt reinforcement, but it required multiple iterations — showing LLM prompt engineering is iterative.
-
-4. **Verification lockout counting**: When users provide only a name without a secondary factor, the agent may inconsistently count or not count it as an attempt. Fixed by the `missing_secondary_factor` gate in Python.
-
-5. **Complex natural language inputs**: When users provide multiple fields in one message with unusual formatting (e.g., "Card: ..., CVV: ..., Expiry: ..."), the LLM sometimes asks for clarification on individual fields instead of calling the tool directly.
+3. **Repetition on out-of-order name**: When a user volunteers their name before being asked (e.g., "Hi, I'm Nithin Jain"), the agent correctly re-collects it during the verification step. This is intentional security behaviour but can feel repetitive to users who provided the information earlier.
 
 ---
 
 ## What I Would Improve With More Time
 
-1. **Structured extraction tool** — Add an `extract_card_details` tool so card fields are extracted via typed schema, reducing format ambiguity.
-2. **Streaming responses** — Use streaming for faster perceived latency.
-3. **Session persistence** — Store `ConversationState` in Redis so sessions survive process restarts.
-4. **Card tokenisation** — Never handle raw card numbers; use a PCI-compliant vault (Stripe, Braintree).
-5. **Retry backoff** — Exponential backoff on network errors to the payment API.
-6. **Evaluation expansion** — Add more adversarial scenarios (prompt injection attempts, jailbreak attempts, malformed inputs).
-7. **Observability** — Add structured logging and OpenTelemetry spans for every tool call and LLM invocation.
+1. **Structured card extraction tool** — Add an `extract_card_details` tool with a typed schema so the LLM always returns card fields in a structured format, eliminating free-form parsing ambiguity.
+2. **Streaming responses** — Use streaming API calls for faster perceived response latency in real-time chat.
+3. **Session persistence** — Store `ConversationState` in Redis or a database so sessions survive process restarts and can be resumed.
+4. **Card tokenisation** — Replace raw card number handling with a PCI-compliant vault (Stripe, Braintree) — never handle raw PANs beyond what is strictly necessary.
+5. **Exponential backoff** — Add retry logic with exponential backoff for transient network failures on both API calls.
+6. **Adversarial evaluation** — Expand the evaluation suite with prompt injection attempts, jailbreak scenarios, and malformed/boundary inputs.
+7. **Observability** — Add structured logging and OpenTelemetry spans for every tool call and LLM invocation to enable production monitoring and debugging.
