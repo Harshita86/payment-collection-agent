@@ -104,3 +104,57 @@ All conversations below are real outputs captured during live testing.
 **Agent:** Your identity has been verified successfully! Your outstanding balance is ₹3,200.50. How much would you like to pay?
 
 > **Note:** 1988-02-29 is a valid leap year date. The agent accepts it exactly as provided. The nearby but incorrect date 1988-02-28 correctly fails verification.
+
+---
+
+## 6. Edge Case — Invalid Account ID (ACC9999)
+
+**User:** Hi  
+**Agent:** Hello! How can I assist you today? Could you please provide your account ID?
+
+**User:** ACC9999  
+**Agent:** I'm sorry, but I wasn't able to find an account associated with that ID. Could you please double-check and try again?
+
+**User:** I'm sure it's ACC9999  
+**Agent:** I'm sorry, but there is no account associated with ID ACC9999 in our system. Please verify your account ID and try again, or contact customer support if you need further assistance.
+
+> **Note:** The agent does not reveal whether an account ever existed — it simply says no account is found and offers to help. No verification steps are triggered.
+
+---
+
+## 7. Edge Case — Out-of-Order Name (Name Volunteered Before Account ID)
+
+**User:** Hi, I'm Nithin Jain and I want to pay my bill  
+**Agent:** Hello, Nithin! Could you please provide your account ID so I can look up your account?
+
+**User:** ACC1001  
+**Agent:** I've found your account. To verify your identity, could you please confirm your full name and provide one secondary factor: your date of birth (YYYY-MM-DD), the last 4 digits of your Aadhaar, or your pincode?
+
+**User:** What next  
+**Agent:** I still need to verify your identity before I can share your balance or proceed to payment. Could you please provide your full name and one of the following: date of birth (YYYY-MM-DD), Aadhaar last 4 digits, or pincode?
+
+**User:** Nithin Jain, DOB 1990-05-14  
+**Agent:** Your identity has been verified successfully! Your outstanding balance is ₹1,250.75. How much would you like to pay today?
+
+> **Note:** Even though the user mentioned their name in the first message, the agent correctly re-collects and verifies it during the verification step. It does not skip the secondary factor — this is by design (security must not be bypassed by volunteering information early).
+
+---
+
+## 8. Edge Case — Wrong Leap Year DOB (ACC1004, DOB 1988-02-28 instead of 1988-02-29)
+
+**User:** Hi  
+**Agent:** Hello! Could you please provide your account ID?
+
+**User:** ACC1004  
+**Agent:** I found your account. Could you please provide your full name and one secondary factor?
+
+**User:** Rahul Mehta  
+**Agent:** Thank you, Rahul. Could you please provide one secondary factor: your date of birth (YYYY-MM-DD), Aadhaar last 4, or pincode?
+
+**User:** My DOB is 1988-02-28  
+**Agent:** I'm sorry, but the verification was not successful. You have 2 attempts remaining. Please double-check your details and try again with your full name and a secondary factor.
+
+**User:** Rahul Mehta, DOB 1988-02-29  
+**Agent:** Your identity has been verified successfully! Your outstanding balance is ₹3,200.50. How much would you like to pay today?
+
+> **Note:** 1988-02-28 fails — it is not the account's date of birth. 1988-02-29 is the correct leap year date and passes exact-match verification. Only 1 of 3 attempts was consumed; the session was not locked.
